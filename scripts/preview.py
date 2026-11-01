@@ -1,7 +1,7 @@
 import cv2
 import time
 
-CAM = 2 #change with selected camera
+CAM = 3 #change with selected camera
 cap = cv2.VideoCapture(CAM, cv2.CAP_MSMF)
 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # set this first
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
