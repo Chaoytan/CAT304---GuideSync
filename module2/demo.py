@@ -1,9 +1,11 @@
 """Run from the parent directory: python -m module2.demo"""
 import argparse
+import os
 from pathlib import Path
 from .direction_checkpoint import locate_objects, MarkerReader, Route
 
-def main():
+def main() -> None:
+    """Run the sample, generate markers, or start the standalone camera demo."""
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--print-markers", action="store_true")
@@ -20,6 +22,8 @@ def main():
             if event["status"] == "expected_visible":
                 route.confirm(ids[0])  # simulate operator confirmation in this demo
         return
+    if os.name == "nt":
+        os.environ.setdefault("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS", "0")
     import cv2
     if args.print_markers:
         a = cv2.aruco
@@ -35,10 +39,19 @@ def main():
             print(path)
         return
     reader = MarkerReader()
-    cap = cv2.VideoCapture(args.camera)
+    cap = (cv2.VideoCapture(args.camera, cv2.CAP_MSMF) if os.name == "nt"
+           else cv2.VideoCapture(args.camera))
     try:
         if not cap.isOpened():
             raise RuntimeError("Cannot open camera; check the index and close other previews.")
+        if os.name == "nt":
+            for prop, value in ((cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")),
+                                (cv2.CAP_PROP_FRAME_WIDTH, 1920), (cv2.CAP_PROP_FRAME_HEIGHT, 1080),
+                                (cv2.CAP_PROP_FPS, 30)):
+                if not cap.set(prop, value):
+                    print(f"Camera did not accept property {prop} = {value}")
+        print(f"Camera reports {cap.get(cv2.CAP_PROP_FRAME_WIDTH):g} x "
+              f"{cap.get(cv2.CAP_PROP_FRAME_HEIGHT):g} at {cap.get(cv2.CAP_PROP_FPS):g} FPS")
         print("Desk test: c confirms visible expected marker, r resets route, q quits.")
         previous = None
         while True:

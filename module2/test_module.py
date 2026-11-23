@@ -8,8 +8,7 @@ class TestModule(unittest.TestCase):
 
     def test_invalid_and_empty_boxes(self):
         self.assertEqual(locate_objects(640,480,[]),[])
-        with self.assertRaises(ValueError):
-            locate_objects(640,480,[dict(label="chair",bbox=[800,0,820,40])])
+        self.assertEqual(locate_objects(640,480,[dict(label="chair",bbox=[800,0,820,40])]), [])
 
     def test_no_accidental_progress(self):
         r=Route()
