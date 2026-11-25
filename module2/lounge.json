@@ -1,0 +1,10 @@
+{
+  "entrance": "Entrance marker identified. The first junction is ahead.",
+  "choice": "First junction. Left and right branches are available. Choose a branch.",
+  "left": "Left branch selected. The planned direction is left.",
+  "right": "Destination corridor selected. The planned direction is right.",
+  "dead_end": "Marked dead end ahead. Turn around and return to the first junction.",
+  "return": "Destination corridor marker identified on the return approach. The planned route continues straight across the junction.",
+  "turn": "Second junction identified. The planned route turns right here.",
+  "destination": "Destination marker identified. Confirm arrival to finish."
+}

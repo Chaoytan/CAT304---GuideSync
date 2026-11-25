@@ -93,12 +93,12 @@ class Route:
 
 
 class MarkerReader:
-    def __init__(self) -> None:
+    def __init__(self, dictionary_name: str = "DICT_4X4_50") -> None:
         """Create the OpenCV detector for the team marker dictionary."""
         import cv2
         self.cv = cv2
         a = cv2.aruco
-        self.detector = a.ArucoDetector(a.getPredefinedDictionary(a.DICT_4X4_50), a.DetectorParameters())
+        self.detector = a.ArucoDetector(a.getPredefinedDictionary(getattr(a, dictionary_name)), a.DetectorParameters())
 
     def read(self, frame: Any) -> list[int]:
         """Return marker IDs from an unannotated BGR camera frame."""

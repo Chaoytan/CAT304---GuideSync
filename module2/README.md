@@ -4,6 +4,8 @@ Copy the whole module2 folder alongside scripts/ in your team repository. Run co
 ## First run (Windows terminal)
     python -m module2.demo
     python -m unittest -v module2.test_module module2.test_integration
+    & "$HOME\.guidesync-venv\Scripts\python.exe" -m module2.demo --camera 0 OR 1 OR 2 ETC...
+    explorer "$HOME\module2_markers"
 
 No extra packages needed for those two commands. The three chair lines are sample inputs, not live AI detections. Expected route events include out_of_order and already_confirmed. A visible marker is an observation, not proof that the wearer has arrived.
 
@@ -41,3 +43,22 @@ For example, run ten three-checkpoint sequences (30 valid individual presentatio
 
 ## GitHub
 On a feature branch, commit the module2 source, configuration, tests and README. Open a pull request and ask the detection and integration teammates to verify the field names with one real frame and detection. Do not commit virtual environments or recordings of people.
+
+## Optional lounge route (original three-marker route stays the default)
+Run from the repository root with the project Python:
+    python -m module2.demo --lounge
+    python -m unittest -v module2.test_module module2.test_integration module2.test_lounge
+    python -m module2.demo --lounge --print-markers
+    python -m module2.demo --lounge --camera 1
+
+Use the USB camera's actual index. Print the six PNGs from lounge_markers. The generator checks each ID by decoding it before saving. Keep white margins. Place 20 and 30 facing the entrance; print another copy of 30 facing the return approach if necessary. Place 40 before the dead end. Place 50 before the second right turn; 60 at the destination. Validate cues in lounge.json against the actual room. DICT_4X4_50 cannot encode 50 or 60; the lounge generator and reader both use DICT_4X4_100.
+
+In the preview: c confirms an ordinary visible checkpoint, l/r selects left/right only while both 20 and 30 are visible, x resets, q quits. Single junction signs on first approach produce partial_junction, not a selection. Return from 40 accepts 30 alone or the exact pair. Other multi-sign combinations produce no cue. The standalone preview prints cues; it does not play audio or run YOLO. Use a sighted operator for the controlled demo.
+
+Team integration: keep one reader and route outside the shared camera loop:
+    from module2.lounge import LoungeRoute
+    from module2.direction_checkpoint import MarkerReader, process_frame
+    route = LoungeRoute()
+    reader = MarkerReader(route.dictionary_name)
+
+Keep the existing process_frame call, using the raw frame and the detector's actual box size. Forward checkpoint text to Module 3, including status choice_visible (not just expected_visible). Module 4 should map l/r to route.choose("left"/"right") and forward its returned event text to Module 3 once when non-None; c uses route.confirm(event["checkpoint"]["expected"]). x resets. On camera loss reset the route, clear queued cues, and require a fresh observation before confirming. Do not call choose or confirm on old frames. A route cue or keyboard selection cannot validate wearer position, orientation, physical arrival or clear walking space.
