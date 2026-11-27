@@ -25,8 +25,8 @@ from .message import Message, Priority
 
 
 def create_manager(engine: str = "pyttsx3", config: "SpeechConfig | None" = None,
-                   rate: "int | None" = None, volume: "float | None" = None,
-                   voice: "str | None" = None, **kwargs) -> SpeechManager:
+                   rate: "int | None" = 160, volume: "float | None" = None,
+                   voice: "str | None" = "zira", **kwargs) -> SpeechManager:
     """Convenience factory. engine: "pyttsx3" (real voice), "console" (print only) or "fake"."""
     if engine == "pyttsx3":
         eng: SpeechEngine = Pyttsx3Engine(rate=rate, volume=volume, voice=voice)

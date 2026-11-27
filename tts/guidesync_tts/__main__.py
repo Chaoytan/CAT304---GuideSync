@@ -38,9 +38,9 @@ def _print_results(results) -> None:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="guidesync_tts", description="GuideSync TTS demo")
     p.add_argument("--engine", default="pyttsx3", choices=["pyttsx3", "console"])
-    p.add_argument("--rate", type=int, default=None, help="words per minute (default ~200)")
+    p.add_argument("--rate", type=int, default=160, help="words per minute (default ~200)")
     p.add_argument("--volume", type=float, default=None, help="0.0-1.0")
-    p.add_argument("--voice", default=None, help="substring of voice name, e.g. zira")
+    p.add_argument("--voice", default="zira", help="substring of voice name, e.g. zira")
     p.add_argument("--cooldown", type=float, default=5.0)
     p.add_argument("--object-ttl", type=float, default=2.0)
     p.add_argument("--no-suppression", action="store_true", help="baseline: announce every detection")
