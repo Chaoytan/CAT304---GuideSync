@@ -1,8 +1,5 @@
 venv/
-.venv/
-.idea/
 __pycache__/
-data/
-logs/
-*.pt
-marker_*.png
+.pytest_cache/
+*.pyc
+*.csv
