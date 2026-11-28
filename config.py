@@ -40,8 +40,10 @@ STABLE_MIN = 3
 REPEAT_COOLDOWN_S = 4.0
 
 # --- Voice ------------------------------------------------------------------
-SPEECH_RATE = 175
+SPEECH_RATE = int(os.environ.get("SPEECH_RATE", "160"))
+SPEECH_VOICE = os.environ.get("SPEECH_VOICE", "zira")
 MIN_GAP_BETWEEN_SPEECH_S = 1.0
+TTS_OBJECT_TTL_S = 2.0
 
 # --- Logging ----------------------------------------------------------------
 LOG_DIR = "logs"

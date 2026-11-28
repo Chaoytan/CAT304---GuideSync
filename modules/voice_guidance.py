@@ -1,150 +1,168 @@
-"""Member 3 - voice guidance.
+"""Module 3 - voice guidance facade over ``modules.tts``.
 
-Interface:
-    VoiceGuidance.speak(decision)   # decision is the dict from obstacle_analyzer
-Speech runs on a background thread so the video loop never blocks. Only the
-newest pending message is kept, and speech is rate-limited so the system does
-not talk continuously.
+Provides ``VoiceGuidance`` backed by ``SpeechManager`` (priority queue,
+cooldown suppression, object staleness filtering, repeat/summary requests, and
+interruptible pyttsx3 speech).
 """
-import queue
-import sys
-import threading
+from __future__ import annotations
+
 import time
+from typing import Any, Callable
 
 import config
+from modules.tts import (
+    KIND_OBJECT,
+    ConsoleEngine,
+    Pyttsx3Engine,
+    SpeechConfig,
+    SpeechEngine,
+    SpeechManager,
+)
 
 
 class PrintBackend:
-    """Fallback when pyttsx3 is unavailable (and used in tests)."""
+    """Fallback backend that prints spoken text (also used by --no-voice and tests)."""
 
-    def __init__(self):
-        self.spoken = []
+    def __init__(self) -> None:
+        self.spoken: list[str] = []
 
-    def say(self, text):
+    def say(self, text: str) -> None:
         self.spoken.append(text)
         print(f"[voice] {text}")
 
 
-class SapiBackend:
-    """Windows speech (SAPI) via pywin32. Reliable for repeated speech from a thread."""
+class _BackendEngine(SpeechEngine):
+    """Adapt a simple ``say(text)`` backend factory to ``SpeechEngine``."""
 
-    def __init__(self):
-        import pythoncom
-        import win32com.client
-        pythoncom.CoInitialize()  # COM must be initialised on the speaking thread
-        self.voice = win32com.client.Dispatch("SAPI.SpVoice")
-        self.voice.Rate = 1  # -10 (slow) .. 10 (fast)
+    def __init__(self, backend_factory: Callable[[], Any], min_gap: float = 0.0) -> None:
+        super().__init__()
+        self._backend_factory = backend_factory
+        self._backend: Any = None
+        self._min_gap = min_gap
+        self._last_end = 0.0
 
-    def say(self, text):
-        self.voice.Speak(text)  # blocks until finished
-
-
-class Pyttsx3Backend:
-    """pyttsx3 fallback. Must be created and used on the same thread."""
-
-    def __init__(self, rate=None):
-        import pyttsx3
-        self.engine = pyttsx3.init()
-        self.engine.setProperty("rate", rate or config.SPEECH_RATE)
-
-    def say(self, text):
-        self.engine.say(text)
-        self.engine.runAndWait()
-        self.engine.stop()  # without this, later say() calls can go silent on Windows
+    def speak(self, text: str, on_start: Callable[[], None] | None = None) -> bool:
+        if self.interrupted:
+            return False
+        if self._backend is None:
+            self._backend = self._backend_factory()
+        wait = self._min_gap - (time.monotonic() - self._last_end)
+        if wait > 0:
+            end = time.monotonic() + wait
+            while time.monotonic() < end:
+                if self.interrupted:
+                    return False
+                time.sleep(0.01)
+        if on_start:
+            on_start()
+        self._backend.say(text)
+        self._last_end = time.monotonic()
+        return not self.interrupted
 
 
 class VoiceGuidance:
-    def __init__(self, backend_factory=None, min_gap=None):
-        self._backend_factory = backend_factory or self._default_backend
-        self._min_gap = config.MIN_GAP_BETWEEN_SPEECH_S if min_gap is None else min_gap
-        self._queue = queue.Queue(maxsize=1)
-        self._enabled = threading.Event()
-        self._enabled.set()
-        self._running = False
-        self._thread = None
-        self._last_end = 0.0
+    """Thread-safe voice output controller integrating ``SpeechManager``."""
 
-    @staticmethod
-    def _default_backend():
-        if sys.platform.startswith("win"):
-            try:
-                return SapiBackend()
-            except Exception as exc:
-                print(f"[voice] SAPI unavailable ({exc}); trying pyttsx3")
+    def __init__(
+        self,
+        backend_factory: Callable[[], Any] | None = None,
+        min_gap: float | None = None,
+        speech_config: SpeechConfig | None = None,
+    ) -> None:
+        self._backend_factory = backend_factory
+        self._min_gap = config.MIN_GAP_BETWEEN_SPEECH_S if min_gap is None else min_gap
+        if speech_config is None:
+            speech_config = SpeechConfig(cooldown_s=config.REPEAT_COOLDOWN_S)
+            speech_config.ttl_by_kind[KIND_OBJECT] = config.TTS_OBJECT_TTL_S
+        self._speech_config = speech_config
+        self._manager: SpeechManager | None = None
+        self._muted = False
+
+    def _build_engine(self) -> SpeechEngine:
+        if self._backend_factory is not None:
+            return _BackendEngine(self._backend_factory, self._min_gap)
         try:
-            return Pyttsx3Backend()
+            eng = Pyttsx3Engine(rate=config.SPEECH_RATE, voice=config.SPEECH_VOICE)
+            eng.check()
+            return eng
         except Exception as exc:  # missing package, no audio device, ...
             print(f"[voice] pyttsx3 unavailable ({exc}); printing instead")
-            return PrintBackend()
-
-    # --- control ------------------------------------------------------------
-    def start(self):
-        if self._thread is None:
-            self._running = True
-            self._thread = threading.Thread(target=self._worker, daemon=True)
-            self._thread.start()
-        return self
-
-    def stop(self):
-        self._running = False
-        self._drain()
-        self._queue.put(None)  # wake the worker
-        if self._thread is not None:
-            self._thread.join(timeout=3)
-            self._thread = None
-
-    def mute(self):
-        self._enabled.clear()
-        self._drain()
-
-    def unmute(self):
-        self._enabled.set()
+            return ConsoleEngine()
 
     @property
-    def muted(self):
-        return not self._enabled.is_set()
+    def manager(self) -> SpeechManager:
+        """Return the active ``SpeechManager``, starting it lazily if needed."""
+        if self._manager is None:
+            self.start()
+        assert self._manager is not None
+        return self._manager
+
+    # --- lifecycle ----------------------------------------------------------
+    def start(self) -> "VoiceGuidance":
+        if self._manager is None:
+            self._manager = SpeechManager(self._build_engine(), self._speech_config)
+            if self._muted:
+                self._manager.pause()
+        return self
+
+    def stop(self) -> None:
+        if self._manager is not None:
+            self._manager.close()
+            self._manager = None
+
+    def __enter__(self) -> "VoiceGuidance":
+        return self.start()
+
+    def __exit__(self, *exc: Any) -> None:
+        self.stop()
+
+    # --- controls -----------------------------------------------------------
+    def mute(self) -> None:
+        self._muted = True
+        if self._manager is not None:
+            self._manager.pause()
+
+    def unmute(self) -> None:
+        self._muted = False
+        if self._manager is not None:
+            self._manager.resume()
+
+    @property
+    def muted(self) -> bool:
+        return self._manager.paused if self._manager is not None else self._muted
 
     # --- speaking -----------------------------------------------------------
-    def speak(self, decision):
-        """Queue a decision (or plain string). A newer message replaces an unspoken older one."""
+    def speak(self, decision: Any, **kwargs: Any) -> None:
+        """Submit text, obstacle decisions, checkpoint events, or system notices."""
         if decision is None or self.muted:
             return
-        text = decision if isinstance(decision, str) else decision["message"]
-        self._drain()
-        try:
-            self._queue.put_nowait(text)
-        except queue.Full:
-            pass
+        self.manager.submit(decision, **kwargs)
 
-    def _drain(self):
-        try:
-            while True:
-                self._queue.get_nowait()
-        except queue.Empty:
-            pass
+    def repeat(self) -> None:
+        """Repeat the last spoken message."""
+        self.manager.repeat_last()
 
-    def _worker(self):
-        backend = self._backend_factory()
-        while self._running:
-            text = self._queue.get()
-            if text is None or not self._running:
-                break
-            wait = self._min_gap - (time.monotonic() - self._last_end)
-            if wait > 0:
-                time.sleep(wait)
-            if self.muted:
-                continue
-            try:
-                backend.say(text)
-            except Exception as exc:  # keep the thread alive if one utterance fails
-                print(f"[voice] speech error: {exc}")
-            self._last_end = time.monotonic()
+    def summary(self) -> None:
+        """Speak a brief summary of recently seen objects."""
+        self.manager.request_summary()
+
+    def cancel_objects(self, reason: str = "camera_lost") -> int:
+        """Drop queued object announcements (e.g. on camera loss)."""
+        if self._manager is None:
+            return 0
+        return self._manager.cancel_pending([KIND_OBJECT], interrupt_current=False, reason=reason)
+
+    def stats(self) -> dict[str, Any]:
+        """Return SpeechManager statistics."""
+        return self.manager.stats()
+
+    def export_log(self, path: str) -> None:
+        """Export SpeechManager event logs to CSV or JSON."""
+        self.manager.export_log(path)
 
 
 if __name__ == "__main__":
-    # Manual test without the rest of the pipeline.
-    v = VoiceGuidance().start()
-    for msg in ["Person ahead, very close", "Chair on your left", "Car on your right, near"]:
-        v.speak(msg)
-        time.sleep(3)  # you should hear all three
-    v.stop()
+    with VoiceGuidance() as voice:
+        for msg in ["Person ahead, very close", "Chair on your left", "Car on your right, near"]:
+            voice.speak(msg)
+            time.sleep(3)

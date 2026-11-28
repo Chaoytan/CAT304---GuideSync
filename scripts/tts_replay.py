@@ -1,24 +1,26 @@
 """Replay a recorded input sequence and compare per-detection baseline vs suppression.
 
 Usage:
-    python replay.py sample_sequence.jsonl                 # silent (console engine, fast)
-    python replay.py sample_sequence.jsonl --engine pyttsx3
-
-Each line of the file:   {"t": 0.5, "input": <anything the adapters accept>}
-"t" is seconds from the start of the run. This is the "same recorded sequence, with and
-without suppression" comparison from section 5.3 of the proposal (message counts only;
-correctness against ground truth still has to be judged by you).
+    python -m scripts.tts_replay sample_data/tts_sequence.jsonl
+    python -m scripts.tts_replay sample_data/tts_sequence.jsonl --engine pyttsx3
 """
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
+from pathlib import Path
 
-from guidesync_tts import SpeechConfig, create_manager
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from modules.tts import SpeechConfig, create_manager
 
 
 def run(path: str, suppression: bool, engine: str) -> dict:
+    """Replay events from a JSONL file and return stats and spoken texts."""
     cfg = SpeechConfig(suppression=suppression)
     tts = create_manager(engine, cfg)
     with open(path, encoding="utf-8") as f:
@@ -37,8 +39,9 @@ def run(path: str, suppression: bool, engine: str) -> dict:
 
 
 def main() -> None:
+    """Run baseline vs suppression comparison on a recorded JSONL sequence."""
     ap = argparse.ArgumentParser()
-    ap.add_argument("sequence")
+    ap.add_argument("sequence", nargs="?", default="sample_data/tts_sequence.jsonl")
     ap.add_argument("--engine", default="console", choices=["console", "pyttsx3"])
     args = ap.parse_args()
 

@@ -11,8 +11,8 @@ PRIORITY_COLOURS = {  # BGR
 }
 
 
-def draw(frame, detections, decision=None, fps=0.0, latency_ms=0.0, muted=False):
-    """Draw boxes, left/centre/right guides and a status bar on a copy of the frame."""
+def draw(frame, detections, decision=None, fps=0.0, latency_ms=0.0, muted=False, checkpoint=None):
+    """Draw boxes, left/centre/right guides, checkpoint status and a status bar."""
     out = frame.copy()
     h, w = out.shape[:2]
 
@@ -34,19 +34,22 @@ def draw(frame, detections, decision=None, fps=0.0, latency_ms=0.0, muted=False)
         )
 
     status = f"FPS {fps:.1f} | latency {latency_ms:.0f} ms | voice {'OFF' if muted else 'ON'}"
+    if checkpoint:
+        status += f" | route {checkpoint.get('status', '')}"
     cv2.rectangle(out, (0, 0), (w, 34), (0, 0, 0), -1)
     cv2.putText(out, status, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-    if decision:
+    banner = None
+    banner_colour = (255, 255, 255)
+    if checkpoint and checkpoint.get("text"):
+        banner = checkpoint["text"]
+        banner_colour = (0, 220, 255)
+    elif decision:
+        banner = decision["message"]
+        banner_colour = PRIORITY_COLOURS.get(decision["priority"], (255, 255, 255))
+
+    if banner:
         cv2.rectangle(out, (0, h - 40), (w, h), (0, 0, 0), -1)
-        cv2.putText(
-            out,
-            decision["message"],
-            (10, h - 12),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.9,
-            PRIORITY_COLOURS.get(decision["priority"], (255, 255, 255)),
-            2,
-        )
+        cv2.putText(out, banner, (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.85, banner_colour, 2)
 
     return out

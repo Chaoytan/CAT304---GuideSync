@@ -201,6 +201,8 @@ def _text_message(d: Mapping) -> Message:
         msg.priority = Priority.parse(d["priority"])
     if d.get("key"):
         msg.key = str(d["key"])
+    elif d.get("duplicate_key"):
+        msg.key = str(d["duplicate_key"])
     if d.get("kind"):
         msg.kind = str(d["kind"])
     if d.get("ttl") is not None:
@@ -209,6 +211,27 @@ def _text_message(d: Mapping) -> Message:
         msg.created_at = float(d["timestamp"])
     msg.interrupt = bool(d.get("interrupt", False))
     msg.bypass_cooldown = bool(d.get("bypass_cooldown", False))
+
+    # Enrich ObstacleAnalyzer decisions (message + label + direction) and
+    # Module 2 checkpoint/lounge events (text + duplicate_key + status) when
+    # explicit kind/key were not provided.
+    if not d.get("kind"):
+        if "direction" in d and "label" in d and "message" in d:
+            msg.kind = KIND_OBJECT
+            if not d.get("key") and not d.get("duplicate_key"):
+                prox = d.get("proximity", "")
+                msg.key = f"obj:{str(d['label']).lower()}:{d['direction']}:{prox}".rstrip(":")
+            msg.meta = {
+                "label": d["label"],
+                "direction": d["direction"],
+                "proximity": d.get("proximity"),
+            }
+        elif "duplicate_key" in d and "status" in d:
+            msg.kind = KIND_ROUTE
+            if "priority" not in d or d["priority"] is None:
+                msg.priority = Priority.HIGH
+            msg.meta = {"status": d.get("status"), "seen": d.get("seen"), "expected": d.get("expected")}
+
     return msg
 
 

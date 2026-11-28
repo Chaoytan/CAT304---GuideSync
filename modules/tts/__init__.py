@@ -2,7 +2,7 @@
 
 Quick start::
 
-    from guidesync_tts import create_manager
+    from modules.tts import create_manager
 
     with create_manager() as tts:                      # real voice via pyttsx3
         tts.submit("Hello")                            # plain text
@@ -21,7 +21,15 @@ from .adapters import (
 )
 from .engine import ConsoleEngine, FakeEngine, Pyttsx3Engine, SpeechEngine
 from .manager import SpeechConfig, SpeechManager, SubmitResult
-from .message import Message, Priority
+from .message import (
+    KIND_OBJECT,
+    KIND_ROUTE,
+    KIND_SYSTEM,
+    KIND_TEXT,
+    KIND_USER,
+    Message,
+    Priority,
+)
 
 
 def create_manager(engine: str = "pyttsx3", config: "SpeechConfig | None" = None,
@@ -41,7 +49,8 @@ def create_manager(engine: str = "pyttsx3", config: "SpeechConfig | None" = None
 
 
 __all__ = [
-    "AdapterOptions", "ConsoleEngine", "FakeEngine", "Message", "Priority", "Pyttsx3Engine",
+    "AdapterOptions", "ConsoleEngine", "FakeEngine", "KIND_OBJECT", "KIND_ROUTE",
+    "KIND_SYSTEM", "KIND_TEXT", "KIND_USER", "Message", "Priority", "Pyttsx3Engine",
     "SpeechConfig", "SpeechEngine", "SpeechManager", "SubmitResult", "UnsupportedInputError",
     "clear_custom_adapters", "create_manager", "normalize", "register_adapter",
 ]

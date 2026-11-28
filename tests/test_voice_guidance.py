@@ -42,6 +42,16 @@ class TestVoice(unittest.TestCase):
         self.assertEqual(self.backend.spoken, [])
         v.stop()
 
+    def test_obstacle_escalation_and_checkpoint_cue(self):
+        v = self.make()
+        v.speak({"message": "Person ahead, near", "direction": "centre", "priority": "high", "label": "person", "proximity": "near"})
+        self.assertTrue(wait_for(lambda: self.backend.spoken == ["Person ahead, near"]))
+        v.speak({"message": "Person ahead, very close", "direction": "centre", "priority": "high", "label": "person", "proximity": "very close"})
+        self.assertTrue(wait_for(lambda: "Person ahead, very close" in self.backend.spoken))
+        v.speak({"status": "expected_visible", "seen": [10], "expected": 10, "text": "Entrance marker identified.", "duplicate_key": "checkpoint:10"})
+        self.assertTrue(wait_for(lambda: "Entrance marker identified." in self.backend.spoken))
+        v.stop()
+
 
 if __name__ == "__main__":
     unittest.main()

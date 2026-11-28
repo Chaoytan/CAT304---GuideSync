@@ -1,4 +1,4 @@
-"""Interactive demo / manual test:  python -m guidesync_tts [--engine pyttsx3|console] [options]
+"""Interactive demo / manual test:  python -m modules.tts [--engine pyttsx3|console] [options]
 
 Type anything at the prompt. Commands start with "/":
 
@@ -36,7 +36,7 @@ def _print_results(results) -> None:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="guidesync_tts", description="GuideSync TTS demo")
+    p = argparse.ArgumentParser(prog="modules.tts", description="GuideSync TTS demo")
     p.add_argument("--engine", default="pyttsx3", choices=["pyttsx3", "console"])
     p.add_argument("--rate", type=int, default=160, help="words per minute (default ~200)")
     p.add_argument("--volume", type=float, default=None, help="0.0-1.0")
@@ -55,7 +55,7 @@ def main(argv=None) -> int:
         return 2
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: could not start the speech engine: {exc!r}")
-        print("Try:  python -m guidesync_tts --engine console   (no audio) to test the logic only.")
+        print("Try:  python -m modules.tts --engine console   (no audio) to test the logic only.")
         return 2
 
     print(__doc__)
