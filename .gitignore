@@ -2,7 +2,11 @@ venv/
 .venv/
 .idea/
 __pycache__/
+.pytest_cache/
+*.pyc
 data/
 logs/
 *.pt
 marker_*.png
+module2_markers/
+lounge_markers/

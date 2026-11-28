@@ -1,0 +1,32 @@
+{"t": 0.0, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 0.2, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 0.4, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 0.6, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 0.8, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 1.0, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 1.2, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 1.4, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 1.6, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 1.8, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 2.0, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 2.2, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 2.4, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 2.6, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 2.8, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 3.0, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 3.2, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 3.4, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 3.6, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 3.8, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 4.0, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 4.2, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 4.4, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 4.6, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 4.8, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 5.0, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 5.2, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 5.4, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 5.6, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 5.8, "input": {"label": "chair", "confidence": 0.9, "bbox": [280, 100, 360, 300], "frame_width": 640}}
+{"t": 6.5, "input": [{"label": "person", "confidence": 0.85, "bbox": [50, 10, 150, 400], "frame_width": 640}, {"label": "person", "confidence": 0.8, "bbox": [60, 10, 150, 400], "frame_width": 640}]}
+{"t": 7.0, "input": {"type": "marker", "marker_id": 1, "name": "Junction A", "route_text": "The planned route continues left."}}
