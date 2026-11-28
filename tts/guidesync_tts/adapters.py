@@ -73,7 +73,9 @@ _IRREGULAR_PLURALS = {"person": "people"}
 
 _LABEL_KEYS = ("label", "class_name", "class", "name", "cls_name")
 _CONF_KEYS = ("confidence", "conf", "score")
-_BOX_KEYS = ("bbox", "box", "xyxy")
+_BOX_KEYS = ("bbox", "box", "xyxy", "box_xyxy")
+_ZONE_KEYS = ("zone", "position")
+_ZONES = {"left": "left", "centre": "centre", "center": "centre", "right": "right"}
 _WIDTH_KEYS = ("frame_width", "image_width", "width")
 _MARKER_ID_KEYS = ("marker_id", "aruco_id", "checkpoint_id", "tag_id")
 _MARKER_TYPES = {"marker", "checkpoint", "aruco"}
@@ -85,6 +87,7 @@ class _Detection:
     label: str
     confidence: Optional[float]
     position: Optional[str]
+    timestamp: Optional[float] = None   # capture time of the camera frame (time.monotonic())
 
 
 # --------------------------------------------------------------------------- registry
@@ -291,15 +294,35 @@ def _position_from_box(box: Any, width: Optional[float], fmt: str = "xyxy") -> O
     return "centre"
 
 
+def _valid_zone(value: Any) -> Optional[str]:
+    """'left' / 'centre' / 'right' (also 'center', any case) -> canonical zone, else None."""
+    if isinstance(value, str):
+        return _ZONES.get(value.strip().lower())
+    return None
+
+
+def _to_float(value: Any) -> Optional[float]:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _detection_from_mapping(d: Mapping, opts: AdapterOptions) -> Optional[_Detection]:
     label = str(_first(d, _LABEL_KEYS))
     conf = _first(d, _CONF_KEYS)
     conf_f = float(conf) if conf is not None else None
     if not _passes(label, conf_f, opts):
         return None
-    pos = _position_from_box(_first(d, _BOX_KEYS), _width_of(d, opts),
-                             str(d.get("bbox_format", "xyxy")).lower())
-    return _Detection(label=label, confidence=conf_f, position=pos)
+    # A zone supplied by the detector wins; the box is only a fallback.
+    pos = _valid_zone(_first(d, _ZONE_KEYS))
+    if pos is None:
+        pos = _position_from_box(_first(d, _BOX_KEYS), _width_of(d, opts),
+                                 str(d.get("bbox_format", "xyxy")).lower())
+    return _Detection(label=label, confidence=conf_f, position=pos,
+                      timestamp=_to_float(d.get("timestamp")))
 
 
 def _passes(label: str, conf: Optional[float], opts: AdapterOptions) -> bool:
@@ -345,8 +368,13 @@ def _collect_object(raw: Any, opts: AdapterOptions, out: List[Any]) -> None:
         width = getattr(raw, "frame_width", None) or opts.frame_width
         conf_f = float(conf) if conf is not None else None
         if _passes(str(label), conf_f, opts):
-            out.append(_Detection(str(label), conf_f,
-                                  _position_from_box(box, float(width) if width else None)))
+            # A zone supplied by the detector wins; the box is only a fallback.
+            pos = next((z for z in (_valid_zone(getattr(raw, k, None)) for k in _ZONE_KEYS)
+                        if z is not None), None)
+            if pos is None:
+                pos = _position_from_box(box, float(width) if width else None)
+            out.append(_Detection(str(label), conf_f, pos,
+                                  timestamp=_to_float(getattr(raw, "timestamp", None))))
     else:
         raise UnsupportedInputError(
             f"Cannot turn {type(raw).__name__!r} into speech. Pass a string, dict, Message, "
@@ -377,12 +405,11 @@ def _finalise(items: List[Any], opts: AdapterOptions) -> List[Message]:
 
 def _detections_to_messages(dets: List[_Detection], opts: AdapterOptions) -> List[Message]:
     groups: Dict[str, List[_Detection]] = {}
-    for d in dets:
+    for i, d in enumerate(dets):
         key = d.label.lower().replace("_", " ")
-        groups.setdefault(key, []).append(d)
         if not opts.group_detections:
-            # unique bucket per detection, same message key afterwards
-            groups[f"{key}#{len(groups[key])}"] = groups.pop(key)
+            key = f"{key}#{i}"        # one bucket per detection; the message key stays the same
+        groups.setdefault(key, []).append(d)
 
     out: List[Message] = []
     for name, members in groups.items():
@@ -405,7 +432,10 @@ def _detections_to_messages(dets: List[_Detection], opts: AdapterOptions) -> Lis
         override = opts.label_priorities.get(base) or opts.label_priorities.get(base.replace(" ", "_"))
         if override is not None:
             prio = Priority.parse(override)
+        stamps = [m.timestamp for m in members if m.timestamp is not None]
+        created = min(stamps) if stamps else None     # earliest frame in the group
         out.append(Message(text=text, priority=prio, key=key, kind=KIND_OBJECT,
+                           created_at=created,
                            meta={"label": base, "count": n, "confidence": conf, "position": pos}))
     return out
 

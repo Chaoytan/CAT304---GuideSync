@@ -262,3 +262,36 @@ def test_on_event_callback_errors_are_ignored():
     with m:
         m.say("hi"); m.wait_until_idle(2)
     assert "spoken" in seen and eng.spoken == ["hi"]
+
+
+# ---- detector timestamps flow into staleness (review item 2.1) -------------------
+def _det_dict(ts, zone="right"):
+    return {"class_name": "chair", "confidence": 0.8, "zone": zone, "timestamp": ts}
+
+
+def test_old_detector_timestamp_is_rejected_as_stale():
+    eng, m = make()
+    with m:
+        r = m.submit(_det_dict(time.monotonic() - 5))[0]   # frame captured 5 s ago, ttl is 2 s
+        assert (r.accepted, r.reason) == (False, "expired")
+    assert eng.spoken == []
+
+
+def test_fresh_detector_timestamp_is_spoken_and_latency_counts_from_frame():
+    eng, m = make()
+    with m:
+        m.submit(_det_dict(time.monotonic() - 0.3))
+        assert m.wait_until_idle(2)
+        (event,) = m.spoken_log()
+    assert eng.spoken == ["Chair, right of view."]
+    assert event["latency_s"] >= 0.3          # measured from the frame, not from submit
+
+
+def test_explicit_created_at_overrides_detector_timestamp():
+    eng, m = make()
+    with m:
+        now = time.monotonic()
+        res = m.submit(_det_dict(now - 5), created_at=now)[0]   # caller says it is fresh
+        assert res.accepted and res.message.created_at == now
+        m.wait_until_idle(2)
+    assert eng.spoken == ["Chair, right of view."]
