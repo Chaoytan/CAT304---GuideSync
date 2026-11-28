@@ -1,5 +1,0 @@
-[
-  {"id":10,"name":"Entrance","cue":"Entrance marker identified. This is the start of the demonstration route."},
-  {"id":20,"name":"Junction A","cue":"Junction A marker identified. The planned route continues left at Junction A."},
-  {"id":30,"name":"Room A","cue":"Room A entrance marker identified. This is the destination marker."}
-]

@@ -2,7 +2,8 @@
 from dataclasses import dataclass
 from types import SimpleNamespace
 import unittest
-from .direction_checkpoint import Route, process_frame
+
+from modules.direction_checkpoint import Route, process_frame
 
 
 @dataclass
@@ -10,12 +11,12 @@ class Detection:
     frame_id: int = 7
     timestamp: float = 1.25
     class_name: str = "chair"
-    confidence: float = .91
+    confidence: float = 0.91
     box_xyxy: tuple = (500, 100, 600, 300)
     zone: str = "right"
 
 
-class TestInterface(unittest.TestCase):
+class TestCheckpointIntegration(unittest.TestCase):
     def setUp(self):
         self.frame = SimpleNamespace(shape=(1080, 1920, 3))
         self.route = Route()
@@ -33,20 +34,24 @@ class TestInterface(unittest.TestCase):
         self.assertEqual(event["checkpoint"]["status"], "expected_visible")
 
     def test_edge_overrun_and_invalid_boxes(self):
-        boxes = [(600,10,640.4,100), (700,5,705,10), (float("nan"),1,50,50)]
+        boxes = [(600, 10, 640.4, 100), (700, 5, 705, 10), (float("nan"), 1, 50, 50)]
         event = self.run_frame(*(Detection(box_xyxy=b) for b in boxes))
-        self.assertEqual([o["bbox"] for o in event["objects"]], [[600,10,640,100]])
+        self.assertEqual([o["bbox"] for o in event["objects"]], [[600, 10, 640, 100]])
         self.assertEqual(event["checkpoint"]["seen"], [10])
 
     def test_empty_or_stale_detections_still_read_markers(self):
-        for items in [[], [Detection(frame_id=6)]]:
+        for items in ([], [Detection(frame_id=6)]):
             event = self.run_frame(*items)
             self.assertEqual(event["objects"], [])
             self.assertEqual(event["checkpoint"]["status"], "expected_visible")
 
     def test_explicit_size_and_legacy_input(self):
-        box = (500,100,600,300)
-        actual = self.run_frame(Detection(box_xyxy=box), detector_size=(1280,720))
+        box = (500, 100, 600, 300)
+        actual = self.run_frame(Detection(box_xyxy=box), detector_size=(1280, 720))
         self.assertEqual(actual["objects"][0]["position"], "centre")
         legacy = self.run_frame({"label": "chair", "bbox": box})
         self.assertEqual(legacy["objects"][0]["position"], "left")
+
+
+if __name__ == "__main__":
+    unittest.main()

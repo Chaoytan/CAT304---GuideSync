@@ -47,13 +47,12 @@ def main():
 
     os.makedirs(config.LOG_DIR, exist_ok=True)
     log_path = os.path.join(config.LOG_DIR, f"run_{datetime.now():%Y%m%d_%H%M%S}.csv")
-    log_file = open(log_path, "w", newline="")
-    log = csv.writer(log_file)
-    log.writerow(["time", "fps", "latency_ms", "n_detections", "message"])
 
     fps, frame_no, last_detections = 0.0, 0, []
     try:
-        with Camera(source) as cam:
+        with open(log_path, "w", newline="", encoding="utf-8") as log_file, Camera(source) as cam:
+            log = csv.writer(log_file)
+            log.writerow(["time", "fps", "latency_ms", "n_detections", "message"])
             print("Running. Press q in the window (or Ctrl+C) to stop.")
             while True:
                 t0 = time.perf_counter()
@@ -73,8 +72,13 @@ def main():
 
                 dt = time.perf_counter() - t0
                 fps = 0.9 * fps + 0.1 * (1 / dt) if fps else 1 / dt
-                log.writerow([f"{time.time():.3f}", f"{fps:.1f}", f"{dt * 1000:.0f}",
-                              len(last_detections), decision["message"] if decision else ""])
+                log.writerow([
+                    f"{time.time():.3f}",
+                    f"{fps:.1f}",
+                    f"{dt * 1000:.0f}",
+                    len(last_detections),
+                    decision["message"] if decision else "",
+                ])
 
                 if not args.no_ui:
                     view = dashboard.draw(frame, last_detections, decision, fps, dt * 1000, voice.muted)
@@ -88,7 +92,6 @@ def main():
         pass
     finally:
         voice.stop()
-        log_file.close()
         cv2.destroyAllWindows()
         print(f"Log saved to {log_path}")
 

@@ -1,5 +1,6 @@
 import unittest
-from .lounge import LoungeRoute
+
+from modules.lounge import LoungeRoute
 
 
 class TestLounge(unittest.TestCase):
@@ -43,8 +44,8 @@ class TestLounge(unittest.TestCase):
 
     def test_no_selection_from_partial_lost_or_ambiguous_pair(self):
         self.junction()
-        for seen in ([30], [20], [], [20,30,50], [99]):
-            self.route.observe([20,30])
+        for seen in ([30], [20], [], [20, 30, 50], [99]):
+            self.route.observe([20, 30])
             self.assertIsNone(self.route.observe(seen)["text"])
             self.assertIsNone(self.route.choose("left"))
             self.assertFalse(self.route.confirm(30))
@@ -58,3 +59,7 @@ class TestLounge(unittest.TestCase):
         self.route.reset()
         self.assertIsNone(self.route.choose("right"))
         self.assertEqual(self.route.observe([10])["status"], "expected_visible")
+
+
+if __name__ == "__main__":
+    unittest.main()
