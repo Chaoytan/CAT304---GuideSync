@@ -383,6 +383,16 @@ def _collect_object(raw: Any, opts: AdapterOptions, out: List[Any]) -> None:
 
 # --------------------------------------------------------------------------- grouping
 
+_ZONE_ORDER = ("left", "centre", "right")
+
+
+def _join_zones(zones: List[str]) -> str:
+    """['left'] -> 'left'; ['left','right'] -> 'left and right'; three -> 'left, centre and right'."""
+    if len(zones) <= 1:
+        return "".join(zones)
+    return ", ".join(zones[:-1]) + " and " + zones[-1]
+
+
 def _plural(label: str) -> str:
     low = label.lower()
     if low in _IRREGULAR_PLURALS:
@@ -415,8 +425,10 @@ def _detections_to_messages(dets: List[_Detection], opts: AdapterOptions) -> Lis
     for name, members in groups.items():
         base = name.split("#")[0]
         n = len(members)
-        positions = {m.position for m in members}
-        pos = positions.pop() if len(positions) == 1 else None
+        # Which zones the members are in. If every member has a zone, say all of them
+        # ("left and right"); if any member has no zone, say nothing about position.
+        zones = [z for z in _ZONE_ORDER if any(m.position == z for m in members)]
+        pos = _join_zones(zones) if zones and all(m.position for m in members) else None
         conf = max((m.confidence for m in members if m.confidence is not None), default=None)
 
         subject = base.capitalize() if n == 1 else f"{_NUMBER_WORDS.get(n, str(n))} {_plural(base)}"
@@ -427,7 +439,7 @@ def _detections_to_messages(dets: List[_Detection], opts: AdapterOptions) -> Lis
 
         key = f"obj:{base}"
         if opts.position_in_key and pos:
-            key += f":{pos}"
+            key += ":" + "+".join(zones)
         prio = Priority.NORMAL
         override = opts.label_priorities.get(base) or opts.label_priorities.get(base.replace(" ", "_"))
         if override is not None:

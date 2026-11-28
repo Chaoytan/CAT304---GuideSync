@@ -57,10 +57,10 @@ def test_detections_grouped_and_pluralised():
     assert texts(dets) == ["Two people, left of view.", "Chair, left of view."]
 
 
-def test_mixed_positions_drop_position():
+def test_chairs_in_different_zones_name_every_zone():
     dets = [{"label": "chair", "confidence": 0.9, "bbox": [10, 0, 50, 50], "frame_width": 600},
             {"label": "chair", "confidence": 0.9, "bbox": [500, 0, 560, 50], "frame_width": 600}]
-    assert texts(dets) == ["Two chairs in view."]
+    assert texts(dets) == ["Two chairs, left and right of view."]
 
 
 def test_min_confidence_and_label_filter():
@@ -246,9 +246,32 @@ def test_missing_or_bad_timestamp_leaves_created_at_none():
     assert normalize({"label": "chair", "confidence": 0.9, "timestamp": "n/a"})[0].created_at is None
 
 
-def test_two_chairs_in_different_zones_keeps_current_wording():
-    # open team decision (review): wording stays "in view" for now
-    assert texts([_det(zone="left"), _det(zone="right")]) == ["Two chairs in view."]
+def test_two_chairs_in_different_zones_name_both_zones():
+    assert texts([_det(zone="left"), _det(zone="right")]) == ["Two chairs, left and right of view."]
+    assert texts([_det(zone="right"), _det(zone="left")]) == ["Two chairs, left and right of view."]
+    assert texts([_det(zone="left"), _det(zone="centre")]) == ["Two chairs, left and centre of view."]
+    assert texts([_det(zone="centre"), _det(zone="right")]) == ["Two chairs, centre and right of view."]
+
+
+def test_chairs_in_all_three_zones():
+    got = texts([_det(zone="right"), _det(zone="left"), _det(zone="centre")])
+    assert got == ["Three chairs, left, centre and right of view."]
+
+
+def test_more_chairs_than_zones():
+    got = texts([_det(zone="left"), _det(zone="left"), _det(zone="right")])
+    assert got == ["Three chairs, left and right of view."]
+
+
+def test_group_with_one_unknown_zone_says_in_view():
+    unknown = {"class_name": "chair", "confidence": 0.8}          # no zone, no box
+    assert texts([_det(zone="left"), unknown]) == ["Two chairs in view."]
+
+
+def test_position_in_key_uses_all_zones():
+    opts = AdapterOptions(position_in_key=True)
+    (m,) = normalize([_det(zone="left"), _det(zone="right")], opts)
+    assert m.effective_key == "obj:chair:left+right"
 
 
 def test_detector_list_of_mixed_classes():

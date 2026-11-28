@@ -24,7 +24,7 @@ CASES = [
     ("backpack, left",          det("backpack", 100),      ["Backpack, left of view."]),
     ("bottle, right",           det("bottle", 500),        ["Bottle, right of view."]),
     ("two people, same side",   [det("person", 80), det("person", 120)], ["Two people, left of view."]),
-    ("two chairs, split sides", [det("chair", 80), det("chair", 520)],   ["Two chairs in view."]),
+    ("two chairs, split sides", [det("chair", 80), det("chair", 520)],   ["Two chairs, left and right of view."]),
     ("three bottles",           [det("bottle", 300)] * 3,  ["Three bottles, centre of view."]),
     ("mixed objects",           [det("person", 100), det("bottle", 500)],
                                 ["Person, left of view.", "Bottle, right of view."]),
